@@ -1,3 +1,6 @@
+팀원 n : 김경민
+
+
 [![PyPI](https://img.shields.io/pypi/v/rl-tetris.svg)](https://pypi.org/project/rl-tetris/)
 
 # RL-Tetris
