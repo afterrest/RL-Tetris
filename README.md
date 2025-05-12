@@ -1,4 +1,5 @@
 팀원 n : 김경민
+팀원 : 안정후 연동성공
 
 
 [![PyPI](https://img.shields.io/pypi/v/rl-tetris.svg)](https://pypi.org/project/rl-tetris/)
