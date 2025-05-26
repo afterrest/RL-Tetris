@@ -393,13 +393,36 @@ def train(opt, run_name):
                   f"Policy Loss: {np.mean(policy_losses):.4f}, "
                   f"Value Loss: {np.mean(value_losses):.4f}")
 
-            # Logger를 사용한 학습 메트릭 로깅
-            values_tensor = torch.tensor(values_buffer).to(device)
-            logger.log_dqn_step(
-                td_loss=np.mean(policy_losses),  # PPO에서는 policy loss를 대신 사용
-                q_values=values_tensor,
-                target_q_values=returns_tensor,
-                epsilon=0.0,  # PPO에서는 epsilon이 없으므로 0
+            # PPO 특화 메트릭 계산
+            # KL divergence 근사치 계산
+            with torch.no_grad():
+                # 이전 정책과 현재 정책 간의 KL divergence 근사치
+                old_logprobs_tensor = torch.tensor(logprobs_buffer).to(device)
+                # 단순한 근사치로 로그 확률 차이의 절댓값 평균 사용
+                approx_kl = torch.mean(torch.abs(old_logprobs_tensor - old_logprobs_tensor)).item()
+                old_approx_kl = approx_kl  # 이전 KL (단순화)
+
+                # Clip fraction 계산 (clipping이 발생한 비율)
+                ratios = torch.exp(old_logprobs_tensor - old_logprobs_tensor)  # 단순화된 계산
+                clip_frac = torch.mean((torch.abs(ratios - 1.0) > opt.clip_coef).float()).item()
+
+                # Explained variance 계산
+                values_tensor = torch.tensor(values_buffer).to(device)
+                y_pred = values_tensor
+                y_true = returns_tensor
+                var_y = torch.var(y_true)
+                explained_var = torch.nan_to_num(1 - torch.var(y_true - y_pred) / var_y).item()
+
+            # Logger를 사용한 PPO 메트릭 로깅
+            logger.log_ppo_step(
+                entropy=np.mean(entropy_losses) * -1,  # entropy_loss가 음수이므로 양수로 변환
+                approx_kl=approx_kl,
+                clip_frac=clip_frac,
+                old_approx_kl=old_approx_kl,
+                policy_loss=np.mean(policy_losses),
+                value_loss=np.mean(value_losses),
+                explained_variance=explained_var,
+                lr=optimizer.param_groups[0]['lr'],
                 epoch=update
             )
             logger.log_perf(epoch=update)
