@@ -203,7 +203,7 @@ def train(opt, run_name):
             epsilon=epsilon,
             epoch=epoch
         )
-
+        logger.log_perf(epoch=epoch)
         # Model save
         if epoch > opt.num_decay_epochs and epoch % opt.save_interval == 0:
             max_cleared_lines = max(max_cleared_lines, info["cleared_lines"])
