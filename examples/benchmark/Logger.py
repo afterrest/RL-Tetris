@@ -96,3 +96,4 @@ class TetrisLogger:
 
     def close(self) -> None:
         self.writer.close()
+ 
