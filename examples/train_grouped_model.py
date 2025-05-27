@@ -15,6 +15,7 @@ from tensorboardX import SummaryWriter
 from rl_tetris.wrapper.Grouped import GroupedWrapper
 from rl_tetris.wrapper.Observation import GroupedFeaturesObservation
 
+from benchmark.Logger import TetrisLogger
 
 def get_args():
     parser = argparse.ArgumentParser("""Tetris 게임 환경 강화학습""")
@@ -91,7 +92,7 @@ def train(opt, run_name):
         torch.manual_seed(42)
 
     # Tensorboard
-    writer = SummaryWriter(log_dir=os.environ["TENSORBOARD_LOGDIR"])
+    logger = TetrisLogger(log_dir=os.environ["TENSORBOARD_LOGDIR"], agent_prefix="dqn")
 
     # Model, Optimizer, Loss function
     model = DNN().to(device)
@@ -116,6 +117,7 @@ def train(opt, run_name):
         feature = torch.from_numpy(info["initial_feature"]).float().to(device)
 
         done = False
+        episode_len = 0
         while not done:
             # Epsilon-greedy policy로 행동 선택(Exploration, Expoitation)
             if random() <= epsilon:
@@ -138,17 +140,19 @@ def train(opt, run_name):
             replay_memory.append([feature, reward, next_feature, done])
 
             if not done:
+                episode_len += 1
                 feature = next_feature
             else:
                 print(
                     f'# Epoch: {epoch}, Score: {info["score"]}, Cleared lines: {info["cleared_lines"]}')
 
                 if epoch > 0:
-                    writer.add_scalar("epoch/score", info["score"], epoch)
-                    writer.add_scalar("epoch/cleared_lines",
-                                      info["cleared_lines"], epoch)
-                    writer.add_scalar("epoch/memory_size",
-                                      len(replay_memory), epoch)
+                    logger.log_episode(
+                        score=info["score"],
+                        cleared_lines=info["cleared_lines"],
+                        episode_len=episode_len,
+                        epoch=epoch
+                    )
 
                 # Most(cleared_lines) model save
                 if info["cleared_lines"] > max_cleared_lines:
@@ -192,12 +196,14 @@ def train(opt, run_name):
         # Logging
         loss = loss.item()
         print(f"Epoch: {epoch}, Loss: {loss:.4f}, Epsilon: {epsilon:.3f}")
-        writer.add_scalar('train/td_loss', loss, epoch)
-        writer.add_scalar("train/q_value", q_values.mean().item(), epoch)
-        writer.add_scalar("train/target_q_value",
-                          target_q_values.mean().item(), epoch)
-        writer.add_scalar("schedule/epsilon", epsilon, epoch)
-
+        logger.log_dqn_step(
+            td_loss=loss,
+            q_values=q_values,
+            target_q_values=target_q_values,
+            epsilon=epsilon,
+            epoch=epoch
+        )
+        logger.log_perf(epoch=epoch)
         # Model save
         if epoch > opt.num_decay_epochs and epoch % opt.save_interval == 0:
             max_cleared_lines = max(max_cleared_lines, info["cleared_lines"])
