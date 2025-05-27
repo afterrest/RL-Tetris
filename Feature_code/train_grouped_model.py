@@ -17,8 +17,6 @@ from rl_tetris.wrapper.Observation import GroupedFeaturesObservation
 import inspect
 from rl_tetris.wrapper.Observation import GroupedFeaturesObservation
 
-print("📄 GroupedFeaturesObservation loaded from:", inspect.getfile(GroupedFeaturesObservation))
-
 
 def get_args():
     parser = argparse.ArgumentParser("""Tetris 게임 환경 강화학습""")
