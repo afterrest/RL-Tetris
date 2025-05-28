@@ -157,6 +157,7 @@ def train(opt, run_name):
                         score=info["score"],
                         cleared_lines=info["cleared_lines"],
                         episode_len=episode_len,
+                        total_env_steps=total_env_steps,
                         epoch=epoch
                     )
 
