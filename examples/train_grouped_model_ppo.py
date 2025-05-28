@@ -42,7 +42,7 @@ def get_args():
     parser.add_argument("--max_grad_norm", type=float, default=0.5, help="그래디언트 클리핑")
 
     # 테트리스 특화 설정
-    parser.add_argument("--reward_scale", type=float, default=0.1, help="보상 스케일링")
+    parser.add_argument("--reward_scale", type=float, default=0.01, help="보상 스케일링")
     parser.add_argument("--value_loss_scale", type=float, default=10.0, help="가치 손실 스케일링")
 
     # 로깅 설정
