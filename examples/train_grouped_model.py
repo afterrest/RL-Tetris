@@ -83,6 +83,7 @@ def epsilon_schedule(epoch, initial_epsilon, final_epsilon, num_decay_epochs):
 
 
 def train(opt, run_name):
+    total_env_steps = 0
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Seed
@@ -135,6 +136,7 @@ def train(opt, run_name):
 
             # 환경과 상호작용
             obs, reward, done, _, info = env.step(action)
+            total_env_steps += 1
 
             # Replay memory에 저장
             replay_memory.append([feature, reward, next_feature, done])
@@ -144,7 +146,7 @@ def train(opt, run_name):
                 feature = next_feature
             else:
                 print(
-                    f'# Epoch: {epoch}, Score: {info["score"]}, Cleared lines: {info["cleared_lines"]}')
+                    f'# Epoch: {epoch}, Total Steps: {total_env_steps}, Score: {info["score"]}, Cleared lines: {info["cleared_lines"]}')
 
                 if epoch > 0:
                     logger.log_episode(
@@ -160,6 +162,7 @@ def train(opt, run_name):
                     model_path = f"models/{run_name}/tetris_{epoch}_{max_cleared_lines}"
                     torch.save(model.state_dict(), model_path)
                     print(f"Best model saved at {model_path}")
+        print(f'Final Total Environment Steps: {total_env_steps}')
 
         # Replay memory가 충분히 쌓여야 학습 시작
         if len(replay_memory) < opt.replay_memory_size // 10:
@@ -212,6 +215,7 @@ def train(opt, run_name):
             print(f"Model saved at {model_path}")
 
     torch.save(model, f"models/{run_name}/tetris")
+    print(f'Final Total Environment Steps: {total_env_steps}')
 
 
 if __name__ == "__main__":
