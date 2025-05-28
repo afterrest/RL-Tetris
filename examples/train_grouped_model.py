@@ -83,7 +83,6 @@ def epsilon_schedule(epoch, initial_epsilon, final_epsilon, num_decay_epochs):
 
 
 def train(opt, run_name):
-    total_env_steps = 0
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Seed
@@ -100,6 +99,7 @@ def train(opt, run_name):
     optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
     loss_fn = F.mse_loss
 
+
     # Environment
     env = gym.make("RL-Tetris-v0", render_mode=None)
     env = GroupedWrapper(
@@ -110,6 +110,8 @@ def train(opt, run_name):
 
     max_cleared_lines = 0
     epoch = 0
+    total_env_steps = 0
+
     while epoch < opt.num_epochs:
         epsilon = epsilon_schedule(
             epoch, opt.initial_epsilon, opt.final_epsilon, opt.num_decay_epochs)
@@ -117,6 +119,7 @@ def train(opt, run_name):
         obs, info = env.reset()
         feature = torch.from_numpy(info["initial_feature"]).float().to(device)
 
+        blocks_dropped = 0
         done = False
         episode_len = 0
         while not done:
@@ -137,6 +140,7 @@ def train(opt, run_name):
             # 환경과 상호작용
             obs, reward, done, _, info = env.step(action)
             total_env_steps += 1
+            blocks_dropped += 1
 
             # Replay memory에 저장
             replay_memory.append([feature, reward, next_feature, done])
@@ -146,7 +150,7 @@ def train(opt, run_name):
                 feature = next_feature
             else:
                 print(
-                    f'# Epoch: {epoch}, Total Steps: {total_env_steps}, Score: {info["score"]}, Cleared lines: {info["cleared_lines"]}')
+                    f'# Epoch: {epoch}, Blocks Dropped: {blocks_dropped}, Score: {info["score"]}, Cleared lines: {info["cleared_lines"]}')
 
                 if epoch > 0:
                     logger.log_episode(
