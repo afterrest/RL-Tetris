@@ -326,6 +326,69 @@ class Tetris(gym.Env):
             del board[i]
             board = [[0 for _ in range(self.width)]] + board
         return board
+    
+    def get_landing_height(self, board):
+        heights = self._get_column_heights(board)
+        return float(np.mean(heights))
+
+
+    def get_row_transitions(self, board):
+        transitions = 0
+        for row in board:
+            prev = 1
+            for cell in row:
+                if cell == 0 and prev == 1:
+                    transitions += 1
+                elif cell != 0 and prev == 0:
+                    transitions += 1
+                prev = cell != 0
+            if prev == 0:
+                transitions += 1
+        return float(transitions)
+
+
+    def get_col_transitions(self, board):
+        transitions = 0
+        for col in zip(*board):
+            prev = 1
+            for cell in col:
+                if cell == 0 and prev == 1:
+                    transitions += 1
+                elif cell != 0 and prev == 0:
+                    transitions += 1
+                prev = cell != 0
+            if prev == 0:
+                transitions += 1
+        return float(transitions)
+
+
+    def get_cumulative_wells(self, board):
+        wells = 0
+        board = np.array(board)
+        h, w = board.shape
+        for x in range(w):
+            for y in range(h):
+                if board[y, x] == 0:
+                    left_filled = (x == 0) or (board[y, x - 1] != 0)
+                    right_filled = (x == w - 1) or (board[y, x + 1] != 0)
+                    if left_filled and right_filled:
+                        wells += 1
+                else:
+                    break
+        return float(wells)
+
+
+    def _get_column_heights(self, board):
+        board = np.array(board)
+        heights = []
+        for col in board.T:
+            idx = np.argmax(col != 0)
+            if col[idx] == 0:
+                heights.append(0)
+            else:
+                heights.append(board.shape[0] - idx)
+        return heights
+
 
 ##################################################
 
