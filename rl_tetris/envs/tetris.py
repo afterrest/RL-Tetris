@@ -389,6 +389,75 @@ class Tetris(gym.Env):
                 heights.append(board.shape[0] - idx)
         return heights
 
+    def get_eroded_piece_cells(self, lines_cleared, board_before, board_after):
+        """지운 줄 수  지워진 piece cell 수"""
+        if lines_cleared == 0:
+            return 0.0
+        diff = (np.array(board_before) != 0) & (np.array(board_after) == 0)
+        return float(np.sum(diff))
+
+    def get_hole_depth(self, board):
+        board = np.array(board)
+        depth = 0
+        for x in range(board.shape[1]):
+            col = board[:, x]
+            found_block = False
+            col_depth = 0
+            for cell in col:
+                if cell != 0:
+                    found_block = True
+                elif found_block:
+                    col_depth += 1
+            depth += col_depth
+        return float(depth)
+
+
+    def get_rows_with_holes(self, board):
+        board = np.array(board)
+        rows_with_holes = 0
+        for row in board:
+            hole_found = False
+            block_found = False
+            for cell in row:
+                if cell == 0 and block_found:
+                    hole_found = True
+                elif cell != 0:
+                    block_found = True
+            if hole_found:
+                rows_with_holes += 1
+        return float(rows_with_holes)
+
+    def get_pattern_diversity(self, board):
+        heights = self._get_column_heights(board)
+        patterns = set()
+        for i in range(len(heights) - 1):
+            pattern = (heights[i], heights[i+1])
+            patterns.add(pattern)
+        return float(len(patterns))
+
+    def get_column_height_variance(self, board):
+        heights = self._get_column_heights(board)
+        return float(np.var(heights))
+    
+    def get_max_well_depth(self, board):
+        board = np.array(board)
+        h, w = board.shape
+        max_depth = 0
+        for x in range(w):
+            depth = 0
+            for y in range(h):
+                if board[y, x] == 0:
+                    left = x == 0 or board[y, x - 1] != 0
+                    right = x == w - 1 or board[y, x + 1] != 0
+                    if left and right:
+                        depth += 1
+                    else:
+                        break
+                else:
+                    break
+            max_depth = max(max_depth, depth)
+        return float(max_depth)
+
 
 ##################################################
 

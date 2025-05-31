@@ -18,22 +18,57 @@ class GroupedFeaturesObservation(gym.ObservationWrapper):
         super().__init__(env)
 
     def observation(self, observation):
-        # 마스크의 값이 1인 경우 extract_board_features 호출, 그렇지 않으면 0으로 채운 벡터 반환
-
         boards = observation["boards"]
         mask = observation["action_mask"]
 
-        features = np.array([
-            self.extract_board_features(board) if m == 1 else np.zeros(4)
-            for board, m in zip(boards, mask)
-        ])
+        dummy = self.extract_board_features(np.zeros((self.env.unwrapped.height, self.env.unwrapped.width), dtype=np.uint8))
+        feature_length = len(dummy)
+
+        features = np.zeros((len(boards), feature_length), dtype=np.float32)
+
+        for i, (board, m) in enumerate(zip(boards, mask)):
+            if m == 1:
+                features[i] = self.extract_board_features(board)
+
         return features
 
+
     def extract_board_features(self, board):
-        """현재 보드 상태에 대한 특징(지워진 줄, 구멍, 인접열 차이 합, 높이 합)을 반환하는 메서드"""
+        env = self.env.unwrapped
 
-        lines_cleared, board = self.env.unwrapped.clear_full_rows_(board)
-        holes = self.env.unwrapped.get_holes(board)
-        bumpiness, height = self.env.unwrapped.get_bumpiness_and_height(board)
+        # 줄 제거 전의 board 복사 (eroded piece cells 계산용)
+        board_before = np.copy(board)
 
-        return np.array([lines_cleared, holes, bumpiness, height], dtype=np.float32)
+        # 줄 제거 수행
+        lines_cleared, board_after = env.clear_full_rows_(board)
+
+        # Feature 계산
+        holes = env.get_holes(board_after)
+        bumpiness, height = env.get_bumpiness_and_height(board_after)
+        #landing_height = env.get_landing_height(board_after)
+        #row_transitions = env.get_row_transitions(board_after)
+        #col_transitions = env.get_col_transitions(board_after)
+        #cumulative_wells = env.get_cumulative_wells(board_after)
+        eroded_piece_cells = env.get_eroded_piece_cells(lines_cleared, board_before, board_after)
+        #hole_depth = env.get_hole_depth(board_after)
+        #rows_with_holes = env.get_rows_with_holes(board_after)
+        #pattern_diversity = env.get_pattern_diversity(board_after)
+        #column_height_variance = env.get_column_height_variance(board_after)
+        #max_well_depth = env.get_max_well_depth(board_after)
+        
+        return np.array([
+            lines_cleared,
+            holes,
+            bumpiness,
+            height,
+            #landing_height,
+            #row_transitions,
+            #col_transitions,
+            #cumulative_wells,
+            eroded_piece_cells,
+            #hole_depth,
+            #rows_with_holes,
+            #pattern_diversity,
+            #column_height_variance
+            #max_well_depth
+        ], dtype=np.float32)
