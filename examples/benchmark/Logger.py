@@ -32,6 +32,7 @@ class TetrisLogger:
         score: int,
         cleared_lines: int,
         episode_len: int,
+        total_env_steps: int,
         epoch: int,
     ) -> None:
         w = self.writer
@@ -39,6 +40,7 @@ class TetrisLogger:
         w.add_scalar(f"{self.agent_prefix}/cleared_lines", cleared_lines, epoch)
         w.add_scalar("episode/episode_length", episode_len, epoch)
         w.add_scalar("episode/score", score, epoch)
+        w.add_scalar("step/episode_length", episode_len, total_env_steps)
 
     # DQN : epoch 마지막 부분에 호출
     def log_dqn_step(
@@ -70,19 +72,17 @@ class TetrisLogger:
         epoch: int                # epoch
     ) -> None:
         w = self.writer
-        w.add_scalars(
-            "ppo",                      
-            {
-                "entropy":              entropy,
-                "approx_kl":            approx_kl,
-                "clip_fraction":        clip_frac,
-                "old_approx_kl":        old_approx_kl,
-                "policy_loss":          policy_loss,
-                "value_loss":           value_loss,
-                "explained_variance":   explained_variance,
-            },
-            epoch,
-        )
+        tmp = {
+                "ppo/entropy":              entropy,
+                "ppo/approx_kl":            approx_kl,
+                "ppo/clip_fraction":        clip_frac,
+                "ppo/old_approx_kl":        old_approx_kl,
+                "ppo/policy_loss":          policy_loss,
+                "ppo/value_loss":           value_loss,
+                "ppo/explained_variance":   explained_variance,
+        }
+        for k, v in tmp.items():
+            w.add_scalar(k, v, epoch)
         w.add_scalar("schedule/lr", lr, epoch)
 
     def log_perf(self, epoch: int) -> None:

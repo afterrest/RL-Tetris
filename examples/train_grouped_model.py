@@ -99,6 +99,7 @@ def train(opt, run_name):
     optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
     loss_fn = F.mse_loss
 
+
     # Environment
     env = gym.make("RL-Tetris-v0", render_mode=None)
     env = GroupedWrapper(
@@ -109,6 +110,8 @@ def train(opt, run_name):
 
     max_cleared_lines = 0
     epoch = 0
+    total_env_steps = 0
+
     while epoch < opt.num_epochs:
         epsilon = epsilon_schedule(
             epoch, opt.initial_epsilon, opt.final_epsilon, opt.num_decay_epochs)
@@ -116,6 +119,7 @@ def train(opt, run_name):
         obs, info = env.reset()
         feature = torch.from_numpy(info["initial_feature"]).float().to(device)
 
+        blocks_dropped = 0
         done = False
         episode_len = 0
         while not done:
@@ -135,6 +139,8 @@ def train(opt, run_name):
 
             # 환경과 상호작용
             obs, reward, done, _, info = env.step(action)
+            total_env_steps += 1
+            blocks_dropped += 1
 
             # Replay memory에 저장
             replay_memory.append([feature, reward, next_feature, done])
@@ -144,13 +150,14 @@ def train(opt, run_name):
                 feature = next_feature
             else:
                 print(
-                    f'# Epoch: {epoch}, Score: {info["score"]}, Cleared lines: {info["cleared_lines"]}')
+                    f'# Epoch: {epoch}, Blocks Dropped: {blocks_dropped}, Score: {info["score"]}, Cleared lines: {info["cleared_lines"]}')
 
                 if epoch > 0:
                     logger.log_episode(
                         score=info["score"],
                         cleared_lines=info["cleared_lines"],
                         episode_len=episode_len,
+                        total_env_steps=total_env_steps,
                         epoch=epoch
                     )
 
@@ -160,6 +167,7 @@ def train(opt, run_name):
                     model_path = f"models/{run_name}/tetris_{epoch}_{max_cleared_lines}"
                     torch.save(model.state_dict(), model_path)
                     print(f"Best model saved at {model_path}")
+        print(f'Final Total Environment Steps: {total_env_steps}')
 
         # Replay memory가 충분히 쌓여야 학습 시작
         if len(replay_memory) < opt.replay_memory_size // 10:
@@ -212,6 +220,7 @@ def train(opt, run_name):
             print(f"Model saved at {model_path}")
 
     torch.save(model, f"models/{run_name}/tetris")
+    print(f'Final Total Environment Steps: {total_env_steps}')
 
 
 if __name__ == "__main__":

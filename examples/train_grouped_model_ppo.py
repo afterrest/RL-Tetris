@@ -27,7 +27,7 @@ def get_args():
     parser.add_argument("--block_size", type=int, default=30)
 
     # PPO 하이퍼파라미터 설정 (테트리스에 최적화)
-    parser.add_argument("--num_epochs", type=int, default=5000)
+    parser.add_argument("--num_epochs", type=int, default=3000)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--lr", type=float, default=1e-3)  # 더 높은 학습률
 
@@ -37,8 +37,8 @@ def get_args():
     parser.add_argument("--clip_coef", type=float, default=0.1, help="PPO clipping coefficient")
     parser.add_argument("--gamma", type=float, default=0.99, help="할인 팩터")
     parser.add_argument("--gae_lambda", type=float, default=0.95, help="GAE lambda")
-    parser.add_argument("--ent_coef", type=float, default=0.02, help="엔트로피 계수")
-    parser.add_argument("--vf_coef", type=float, default=1.0, help="가치 함수 계수")
+    parser.add_argument("--ent_coef", type=float, default=0.01, help="엔트로피 계수")
+    parser.add_argument("--vf_coef", type=float, default=0.5, help="가치 함수 계수")
     parser.add_argument("--max_grad_norm", type=float, default=0.5, help="그래디언트 클리핑")
 
     # 테트리스 특화 설정
@@ -260,6 +260,7 @@ def train(opt, run_name):
                         score=next_info["score"],
                         cleared_lines=next_info["cleared_lines"],
                         episode_len=episode_length,
+                        total_env_steps=global_step,
                         epoch=update
                     )
 
@@ -426,7 +427,7 @@ def train(opt, run_name):
                 epoch=update
             )
             logger.log_perf(epoch=update)
-
+            logger.flush_every(epoch=update, interval=10)
         # 주기적 모델 저장
         if update % opt.save_interval == 0:
             model_path = f"models/{run_name}/tetris_update_{update}.pth"
